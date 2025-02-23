@@ -21,6 +21,7 @@ void spi_initilize(PmodOLED *oled)
     gpio_init(oled->cs_pin);
     gpio_init(oled->dc_pin);
     gpio_init(oled->res_pin);
+
     // Set direction of GPIO pins
     gpio_set_dir(oled->cs_pin, GPIO_OUT);
     gpio_set_dir(oled->dc_pin, GPIO_OUT);
@@ -54,16 +55,22 @@ void reset_oled(PmodOLED *oled)
 
 void init_oled(PmodOLED *oled)
 {
+    gpio_put(oled->cs_pin, 0); // Select this OLED
     reset_oled(oled);
 
     for (size_t i = 0; i < sizeof(init_cmds); i++)
     {
         send_command(oled, init_cmds[i]);
     }
+
+    gpio_put(oled->cs_pin, 1); // Deselect OLED after init
 }
 
 void clear_oled(PmodOLED *oled)
 {
+
+    gpio_put(oled->cs_pin, 0); // Select OLED
+
     uint8_t buffer[128]; // Buffer for one row (128 columns)
     memset(buffer, 0, sizeof(buffer));
 
@@ -74,10 +81,13 @@ void clear_oled(PmodOLED *oled)
         send_command(oled, 0x10);     // Set higher column address
         send_data(oled, buffer, 128); // Clear the row
     }
+    gpio_put(oled->cs_pin, 1); // Deselect OLED
 }
 
 void draw_string(PmodOLED *oled, const char *str, uint8_t page, uint8_t col)
 {
+    gpio_put(oled->cs_pin, 0); // Select the correct OLED
+
     for (size_t i = 0; str[i] != '\0'; i++)
     {
         uint8_t char_index = str[i] - ' '; // Convert character to font index (starting from space ' ')
@@ -90,4 +100,6 @@ void draw_string(PmodOLED *oled, const char *str, uint8_t page, uint8_t col)
             col += 6;                                           // Move cursor (5 pixels + 1 spacing)
         }
     }
+
+    gpio_put(oled->cs_pin, 1); // Deselect OLED after drawing
 }
